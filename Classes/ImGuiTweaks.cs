@@ -19,20 +19,28 @@ namespace KamiLib.Classes;
 
 public static class ImGuiTweaks {
     public static bool ColorEditWithDefault(string label, ref Vector4 color, Vector4 defaultColor) {
-        var valueChanged = ImGui.ColorEdit4($"##{label}", ref color, ImGuiColorEditFlags.AlphaPreviewHalf | ImGuiColorEditFlags.NoInputs);
+        // The color value itself is always applied live (ref color is updated by ColorEdit4
+        // on every frame the user drags), but the returned bool is what callers use to decide
+        // whether to persist the config to disk (e.g. `ConfigChanged |= ColorEditWithDefault(...)`
+        // feeding a per-tick SaveConfig()). Returning true on every changed frame meant a
+        // color drag wrote the config file every single frame; only report a save-worthy
+        // change once the edit is actually finished (mouse released) or the Default button
+        // is pressed (a discrete, already-final action).
+        ImGui.ColorEdit4($"##{label}", ref color, ImGuiColorEditFlags.AlphaPreviewHalf | ImGuiColorEditFlags.NoInputs);
+        var shouldSave = ImGui.IsItemDeactivatedAfterEdit();
 
         ImGui.SameLine();
-        
+
         if (ImGui.Button($"Default##{label}")) {
             color = defaultColor;
-            valueChanged = true;
+            shouldSave = true;
         }
 
         ImGui.SameLine();
 
         ImGui.TextUnformatted(label);
-        
-        return valueChanged;
+
+        return shouldSave;
     }
 
     public static bool IconButtonWithSize(IFontHandle font, FontAwesomeIcon icon, string id, Vector2 size, string? tooltip = null) {
