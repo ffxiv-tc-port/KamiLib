@@ -92,4 +92,12 @@ public abstract class SelectionListWindow<T>(string windowName, Vector2 size, bo
     protected void DeselectItem() {
         selectedOption = default;
     }
+
+    /// <summary>
+    /// Selects an option programmatically, as if the user had clicked it in the list.
+    /// Lets the window be driven from outside - chat links, commands and the like.
+    /// </summary>
+    protected void SelectItem(T option) {
+        selectedOption = option;
+    }
 }
