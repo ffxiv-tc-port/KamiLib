@@ -29,8 +29,16 @@ public static class ConditionExtensions {
     public static bool IsInBardPerformance(this ICondition condition)
         => condition.Any(ConditionFlag.Performing);
 
-    public static unsafe bool IsIslandDoingSomethingMode()
-        => MJIManager.Instance()->CurrentMode is not 0 && MJIManager.Instance()->IsPlayerInSanctuary;
+    public static unsafe bool IsIslandDoingSomethingMode() {
+        // ⚠️ MJIManager 宣告為 [StaticAddress(..., isPointer: true)],產生的 Instance() 只在
+        // 「特徵碼解析不到」時擲例外,回傳的卻是 *ppInstance 本身——遊戲還沒配置管理器時
+        // (登入前、角色選擇)會靜默回 null,讀 CurrentMode(0x10) 與 IsPlayerInSanctuary(0x06) 即崩潰。
+        // 另原本一行呼叫 Instance() 兩次,這裡一併改成取一次。
+        var manager = MJIManager.Instance();
+        if (manager is null) return false;
+
+        return manager->CurrentMode is not 0 && manager->IsPlayerInSanctuary;
+    }
 
     public static bool IsInQuestEvent(this ICondition condition)
         => condition.Any(ConditionFlag.OccupiedInQuestEvent) || IsIslandDoingSomethingMode();
