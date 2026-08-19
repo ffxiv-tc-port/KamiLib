@@ -22,9 +22,19 @@ public class CharacterConfiguration  : IPluginConfiguration {
     [JsonIgnore] public ISharedImmediateTexture? ProfilePicture { get; set; }
 
     public unsafe void UpdateCharacterData() {
-        if (AgentLobby.Instance()->IsLoggedIn) {
+        // AgentLobby.Instance() 是 CS 的 [Agent] 產生器版本，展開後逐字是
+        // `agentModule == null ? null : (AgentLobby*)agentModule->GetAgentByInternalId(...)`
+        // ——兩層都合法會回 null（UIModule 尚未建立、代理人尚未配置）。這支就是拿來判斷
+        // 「現在登入了沒」的，換句話說它本來就會在還沒登入的時候被呼叫到。
+        // 解參考 null 是 AccessViolation，而 AVE 在 .NET Core 是 corrupted-state exception，
+        // try/catch 完全攔不到 ⇒ 只能在解參考之前擋。
+        // 取一次本地指標、判空後重用（原本裸呼叫兩次），取不到就當作未登入、不動設定。
+        var lobby = AgentLobby.Instance();
+        if (lobby is null) return;
+
+        if (lobby->IsLoggedIn) {
             CharacterName = PlayerState.Instance()->CharacterNameString;
-            CharacterWorld = AgentLobby.Instance()->LobbyData.HomeWorldName.ToString();
+            CharacterWorld = lobby->LobbyData.HomeWorldName.ToString();
         }
     }
 
