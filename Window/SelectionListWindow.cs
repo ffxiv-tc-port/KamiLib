@@ -12,6 +12,9 @@ namespace KamiLib.Window;
 
 public abstract class SelectionListWindow<T>(string windowName, Vector2 size, bool fixedSize = false) : Window(windowName, size, fixedSize) where T : notnull {
     private T? selectedOption;
+    // 每幀重用：清單內容照舊每幀依 FilterOptions 重篩，只是不再每幀配置新的清單與委派。
+    private readonly List<T> filteredOptions = [];
+    private System.Action<T>? drawOptionClipped;
     
     protected abstract List<T> Options { get; }
     protected abstract float SelectionListWidth { get; }
@@ -46,7 +49,17 @@ public abstract class SelectionListWindow<T>(string windowName, Vector2 size, bo
                 using var headerHoverColor = ImRaii.PushColor(ImGuiCol.HeaderHovered, ImGui.GetStyle().GetFadedColor(ImGuiCol.HeaderHovered, 0.10f));
                 using var textSelectedColor = ImRaii.PushColor(ImGuiCol.Header, ImGui.GetStyle().GetFadedColor(ImGuiCol.Header, 0.1f));
 
-                ImGuiClip.ClippedDraw(Options.Where(FilterOptions).ToList(), DrawOptionClipped, SelectionItemHeight * ImGuiHelpers.GlobalScale);
+                filteredOptions.Clear();
+                foreach (var option in Options) {
+                    if (FilterOptions(option)) filteredOptions.Add(option);
+                }
+
+                try {
+                    ImGuiClip.ClippedDraw(filteredOptions, drawOptionClipped ??= DrawOptionClipped, SelectionItemHeight * ImGuiHelpers.GlobalScale);
+                }
+                finally {
+                    filteredOptions.Clear();
+                }
             }
         }
         
@@ -68,7 +81,7 @@ public abstract class SelectionListWindow<T>(string windowName, Vector2 size, bo
                 DrawSelectedOption(selectedOption);
             }
             else {
-                const string noSelectionText = "Select an option";
+                const string noSelectionText = "請選擇一個項目";
                 var textSize = ImGui.CalcTextSize(noSelectionText);
                 
                 ImGui.SetCursorPos(ImGui.GetContentRegionMax() / 2.0f - textSize / 2.0f);
@@ -91,5 +104,13 @@ public abstract class SelectionListWindow<T>(string windowName, Vector2 size, bo
 
     protected void DeselectItem() {
         selectedOption = default;
+    }
+
+    /// <summary>
+    /// Selects an option programmatically, as if the user had clicked it in the list.
+    /// Lets the window be driven from outside - chat links, commands and the like.
+    /// </summary>
+    protected void SelectItem(T option) {
+        selectedOption = option;
     }
 }

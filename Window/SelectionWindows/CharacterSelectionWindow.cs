@@ -1,11 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Numerics;
 using Dalamud.Interface.Utility;
 using Dalamud.Plugin.Services;
 using KamiLib.Configuration;
 
 namespace KamiLib.Window.SelectionWindows;
 
-internal class CharacterSelectionWindow(bool multiSelect, ITextureProvider textureProvider) : SelectionWindowBase<CharacterConfiguration> {
+internal class CharacterSelectionWindow(bool multiSelect, ITextureProvider textureProvider) : SelectionWindowBase<CharacterConfiguration>(new Vector2(600.0f, 400.0f), alternativeName: DefaultWindowName("選擇角色")) {
     protected override bool AllowMultiSelect => multiSelect;
     protected override float SelectionHeight => 75.0f * ImGuiHelpers.GlobalScale;
     

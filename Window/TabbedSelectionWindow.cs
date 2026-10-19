@@ -15,12 +15,27 @@ public abstract class TabbedSelectionWindow<T>(string windowName, Vector2 size, 
     protected virtual bool AllowTabScroll => true;
     
     private string selectedTab = string.Empty;
-    
+    private bool focusSelectionListTab;
+
+    /// <summary>
+    /// Forces the selection list tab to the front on the next draw. ImGui remembers which tab
+    /// was last active, so opening the window from outside is not enough on its own.
+    /// </summary>
+    public void FocusSelectionListTab() {
+        focusSelectionListTab = true;
+    }
+
     protected override void DrawContents() {
         using var windowTabBar = ImRaii.TabBar("tabbedSelectionTabBar", ImGuiTabBarFlags.Reorderable);
         if (!windowTabBar) return;
 
-        using (var selectionListTab = ImRaii.TabItem(SelectionListTabName)) {
+        var selectionListTabFlags = ImGuiTabItemFlags.None;
+        if (focusSelectionListTab) {
+            selectionListTabFlags = ImGuiTabItemFlags.SetSelected;
+            focusSelectionListTab = false;
+        }
+
+        using (var selectionListTab = ImRaii.TabItem(SelectionListTabName, selectionListTabFlags)) {
             if (selectionListTab) {
                 if (selectedTab != SelectionListTabName) {
                     OnTabChanged();

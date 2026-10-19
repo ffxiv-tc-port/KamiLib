@@ -65,7 +65,7 @@ public class WindowManager : IDisposable {
 
         window.TitleBarButtons.Add(new Dalamud.Interface.Windowing.Window.TitleBarButton {
             Icon = FontAwesomeIcon.Question,
-            ShowTooltip = () => ImGui.SetTooltip($"Window by {pluginInterface.InternalName}{(window.AdditionalInfoTooltip is not null ? "\n\n" : "")}{window.AdditionalInfoTooltip}"),
+            ShowTooltip = () => ImGui.SetTooltip($"{pluginInterface.InternalName} 插件的視窗{(window.AdditionalInfoTooltip is not null ? "\n\n" : "")}{window.AdditionalInfoTooltip}"),
             IconOffset = new Vector2(3.0f, 1.0f),
             Priority = -1,
         });

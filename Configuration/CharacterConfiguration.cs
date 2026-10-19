@@ -22,9 +22,14 @@ public class CharacterConfiguration  : IPluginConfiguration {
     [JsonIgnore] public ISharedImmediateTexture? ProfilePicture { get; set; }
 
     public unsafe void UpdateCharacterData() {
-        if (AgentLobby.Instance()->IsLoggedIn) {
+        // AgentLobby.Instance() 在 UIModule 尚未建立或代理人尚未配置時回 null，而這支在登入前就可能被呼叫：
+        // 取不到就當作未登入、不動設定。
+        var lobby = AgentLobby.Instance();
+        if (lobby is null) return;
+
+        if (lobby->IsLoggedIn) {
             CharacterName = PlayerState.Instance()->CharacterNameString;
-            CharacterWorld = AgentLobby.Instance()->LobbyData.HomeWorldName.ToString();
+            CharacterWorld = lobby->LobbyData.HomeWorldName.ToString();
         }
     }
 

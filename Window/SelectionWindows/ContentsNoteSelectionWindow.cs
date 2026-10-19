@@ -17,7 +17,7 @@ public class ContentsNoteSelectionWindow : IconItemSelectionWindow<ContentsNote>
 	[PluginService] private IDataManager DataManager { get; set; } = null!;
 	[PluginService] private ITextureProvider TextureProvider { get; set; } = null!;
 
-	public ContentsNoteSelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(500.0f, 600.0f)) {
+	public ContentsNoteSelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(500.0f, 600.0f), alternativeName: DefaultWindowName("選擇挑戰筆記項目")) {
 		pluginInterface.Inject(this);
 
 		SelectionOptions = DataManager.GetExcelSheet<ContentsNote>()

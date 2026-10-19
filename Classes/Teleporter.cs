@@ -25,8 +25,8 @@ public unsafe class Teleporter {
 		ChatGui.Print(new XivChatEntry {
 			Message = new SeStringBuilder()
 				.AddUiForeground($"[{pluginName}] ", 45)
-				.AddUiForeground("[Teleport] ", 62)
-				.AddText("Teleporting to ")
+				.AddUiForeground("[傳送] ", 62)
+				.AddText("正在傳送至")
 				.AddUiForeground(aetheryte.PlaceName.Value.Name.ExtractText(), 576)
 				.Build(),
 		});

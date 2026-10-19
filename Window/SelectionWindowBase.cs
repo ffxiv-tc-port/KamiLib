@@ -15,10 +15,10 @@ public abstract class SelectionWindowBase<T> : Window where T : notnull {
     protected SelectionWindowBase() : this(new Vector2(600.0f, 400.0f)) {
     }
 
-    protected SelectionWindowBase(Vector2 size, bool fixedSize = true, string? alternativeName = null) : base(alternativeName ?? $"{typeof(T).Name} Selection Window", size, fixedSize) {
+    protected SelectionWindowBase(Vector2 size, bool fixedSize = true, string? alternativeName = null) : base(alternativeName ?? DefaultWindowName("選擇"), size, fixedSize) {
         TitleBarButtons.Add(new TitleBarButton {
             ShowTooltip = () => {
-                ImGui.SetTooltip("Deselect All");
+                ImGui.SetTooltip("全不選");
             },
             Icon = FontAwesomeIcon.Minus,
             Click = _ => selected.Clear(),
@@ -27,7 +27,7 @@ public abstract class SelectionWindowBase<T> : Window where T : notnull {
         
         TitleBarButtons.Add(new TitleBarButton {
             ShowTooltip = () => {
-                ImGui.SetTooltip("Select All");
+                ImGui.SetTooltip("全選");
             },
             Icon = FontAwesomeIcon.Plus,
             Click = _ => {
@@ -42,6 +42,11 @@ public abstract class SelectionWindowBase<T> : Window where T : notnull {
 
         UnCollapseOrShow();
     }
+
+    /// <summary>「顯示文字###{T} Selection Window」：### 之後是 ImGui ID。</summary>
+    /// <remarks>WindowManager 判重複比的是整個名稱：同一個 T 的視窗要給同一段顯示文字，否則兩個視窗能同時開出同一個 ImGui ID。</remarks>
+    protected static string DefaultWindowName(string displayText)
+        => $"{displayText}###{typeof(T).Name} Selection Window";
 
     protected abstract bool AllowMultiSelect { get; }
     public Action<List<T>>? MultiSelectionCallback { get; init; }
@@ -84,7 +89,7 @@ public abstract class SelectionWindowBase<T> : Window where T : notnull {
             resetFocus = false;
         }
         
-        if (ImGui.InputTextWithHint("##filterInput", "Search...", ref searchString, 500, ImGuiInputTextFlags.AutoSelectAll)) {
+        if (ImGui.InputTextWithHint("##filterInput", "搜尋…", ref searchString, 500, ImGuiInputTextFlags.AutoSelectAll)) {
             RefreshSearchResults();
         }
 
@@ -112,7 +117,7 @@ public abstract class SelectionWindowBase<T> : Window where T : notnull {
             }
             else {
                 var position = ImGui.GetContentRegionAvail() / 2.0f;
-                const string text = "No Results";
+                const string text = "沒有符合的結果";
                 var textSize = ImGui.CalcTextSize(text);
                 
                 using var textColor = new ImRaii.Color().Push(ImGuiCol.Text, KnownColor.Orange.Vector());
@@ -132,14 +137,14 @@ public abstract class SelectionWindowBase<T> : Window where T : notnull {
         ImGuiHelpers.ScaledDummy(5.0f);
 
         using (ImRaii.Disabled(selected.Count is 0)) {
-            if (ImGui.Button("Confirm", ImGuiHelpers.ScaledVector2(100.0f, 25.0f))) {
+            if (ImGui.Button("確定", ImGuiHelpers.ScaledVector2(100.0f, 25.0f))) {
                 ConfirmSelection();
             }
         }
             
         ImGui.SameLine();
         ImGui.SetCursorPosX(ImGui.GetContentRegionMax().X - 100.0f * ImGuiHelpers.GlobalScale);
-        if (ImGui.Button("Cancel", ImGuiHelpers.ScaledVector2(100.0f, 25.0f))) {
+        if (ImGui.Button("取消", ImGuiHelpers.ScaledVector2(100.0f, 25.0f))) {
             CancelSelection();
         }
     }

@@ -32,7 +32,7 @@ public class Combo(string name, List<IComboItem> items) {
 			}
 		}
 		else {
-			ImGui.Text("KamiLib.Combo Error, no items.");
+			ImGui.Text("KamiLib.Combo 錯誤：沒有任何項目。");
 		}
 	}
 }

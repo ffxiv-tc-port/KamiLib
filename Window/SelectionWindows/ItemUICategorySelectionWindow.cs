@@ -15,7 +15,7 @@ public class ItemUiCategorySelectionWindow : SelectionWindowBase<ItemUICategory>
     [PluginService] private ITextureProvider TextureProvider { get; set; } = null!;
     [PluginService] private IDataManager DataManager { get; set; } = null!;
 
-    public ItemUiCategorySelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(300.0f, 600.0f), false) {
+    public ItemUiCategorySelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(300.0f, 600.0f), false, DefaultWindowName("選擇物品類型")) {
         pluginInterface.Inject(this);
 
         SelectionOptions = DataManager

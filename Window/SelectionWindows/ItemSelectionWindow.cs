@@ -16,7 +16,7 @@ public class ItemSelectionWindow : SelectionWindowBase<Item> {
     [PluginService] private ITextureProvider TextureProvider { get; set; } = null!;
     [PluginService] private IDataManager DataManager { get; set; } = null!;
 
-    public ItemSelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(300.0f, 600.0f), false) {
+    public ItemSelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(300.0f, 600.0f), false, DefaultWindowName("選擇物品")) {
         pluginInterface.Inject(this);
 
         SelectionOptions = DataManager

@@ -29,8 +29,14 @@ public static class ConditionExtensions {
     public static bool IsInBardPerformance(this ICondition condition)
         => condition.Any(ConditionFlag.Performing);
 
-    public static unsafe bool IsIslandDoingSomethingMode()
-        => MJIManager.Instance()->CurrentMode is not 0 && MJIManager.Instance()->IsPlayerInSanctuary;
+    public static unsafe bool IsIslandDoingSomethingMode() {
+        // MJIManager 是 isPointer 的靜態位址:遊戲還沒配置管理器時(登入前、角色選擇)Instance() 回 null,
+        // 取不到就回 false。
+        var manager = MJIManager.Instance();
+        if (manager is null) return false;
+
+        return manager->CurrentMode is not 0 && manager->IsPlayerInSanctuary;
+    }
 
     public static bool IsInQuestEvent(this ICondition condition)
         => condition.Any(ConditionFlag.OccupiedInQuestEvent) || IsIslandDoingSomethingMode();

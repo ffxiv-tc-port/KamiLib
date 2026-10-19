@@ -33,7 +33,7 @@ public class CommandManager : IDisposable {
             
             DalamudCommandManager.AddHandler($"/{alias} help", new CommandInfo(HelpCommandHandler) {
                 ShowInHelp = true,
-                HelpMessage = "Display all available commands",
+                HelpMessage = "顯示所有可用的指令",
             });
             
             DalamudCommandManager.AddHandler($"/{alias}", new CommandInfo(DalamudCommandHandler) {
@@ -105,9 +105,9 @@ public class CommandManager : IDisposable {
             .Append($"[{pluginInterface.InternalName}] ")
             .PopColor()
             .PushColorRgba(KnownColor.Gold.Vector())
-            .Append("[Command] ")
+            .Append("[指令] ")
             .PopColor()
-            .Append("Displaying all commands\n\n");
+            .Append("所有可用的指令：\n\n");
 
         foreach (var registeredCommand in registeredCommands) {
             if (!registeredCommand.Hidden) {

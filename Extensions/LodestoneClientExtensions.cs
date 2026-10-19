@@ -25,7 +25,7 @@ public static class LodestoneClientExtensions {
                     .FirstOrDefault(entry => string.Equals(entry.Name, character.CharacterName, StringComparison.OrdinalIgnoreCase))
                     ?.Id;
             
-                pluginInterface.SaveCharacterFile(character.ContentId, "System.config.json", character);
+                pluginInterface.SaveCharacterConfiguration(character);
             }
 
             // If it is still null, then we couldn't find it.

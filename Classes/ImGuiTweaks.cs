@@ -19,20 +19,24 @@ namespace KamiLib.Classes;
 
 public static class ImGuiTweaks {
     public static bool ColorEditWithDefault(string label, ref Vector4 color, Vector4 defaultColor) {
-        var valueChanged = ImGui.ColorEdit4($"##{label}", ref color, ImGuiColorEditFlags.AlphaPreviewHalf | ImGuiColorEditFlags.NoInputs);
+        // The color itself is applied live through `ref color`; the returned bool only tells callers
+        // when to persist the config. It is reported once the edit is finished (item deactivated) or
+        // the default button is pressed, not on every dragged frame, so a drag does not save every frame.
+        ImGui.ColorEdit4($"##{label}", ref color, ImGuiColorEditFlags.AlphaPreviewHalf | ImGuiColorEditFlags.NoInputs);
+        var shouldSave = ImGui.IsItemDeactivatedAfterEdit();
 
         ImGui.SameLine();
-        
-        if (ImGui.Button($"Default##{label}")) {
+
+        if (ImGui.Button($"預設##{label}")) {
             color = defaultColor;
-            valueChanged = true;
+            shouldSave = true;
         }
 
         ImGui.SameLine();
 
         ImGui.TextUnformatted(label);
-        
-        return valueChanged;
+
+        return shouldSave;
     }
 
     public static bool IconButtonWithSize(IFontHandle font, FontAwesomeIcon icon, string id, Vector2 size, string? tooltip = null) {
@@ -183,7 +187,7 @@ public static class ImGuiTweaks {
 
             using (ImRaii.PushStyle(ImGuiStyleVar.Alpha, 1.0f)) {
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) {
-                    ImGui.SetTooltip("Hold Shift + Control while clicking activate button");
+                    ImGui.SetTooltip("按住 Shift + Control 才能按下此按鈕");
                 }
             }
         }

@@ -20,7 +20,7 @@ public class ContentFinderConditionSelectionWindow : SelectionWindowBase<Content
 	[PluginService] private IDataManager DataManager { get; set; } = null!;
 	[PluginService] private ITextureProvider TextureProvider { get; set; } = null!;
 
-	public ContentFinderConditionSelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(600.0f, 600.0f)) {
+	public ContentFinderConditionSelectionWindow(IDalamudPluginInterface pluginInterface) : base(new Vector2(600.0f, 600.0f), alternativeName: DefaultWindowName("選擇任務")) {
 		pluginInterface.Inject(this);
 
 		SelectionOptions = DataManager.GetExcelSheet<ContentFinderCondition>()

@@ -11,7 +11,10 @@ using NetStone;
 namespace KamiLib.Extensions;
 
 public static class NetStoneExtensions {
-    internal static async Task<ISharedImmediateTexture?> TryGetProfilePicture(HttpClient httpClient, LodestoneClient lodestoneClient, IDalamudPluginInterface pluginInterface, ITextureProvider textureProvider, IPluginLog log, CharacterConfiguration characterConfiguration) {
+    /// <summary>
+    /// 先讀本機已存的 profile.png；兩個 client 都給才會向 Lodestone 查詢並下載頭像，任一為 null 時絕不連線。
+    /// </summary>
+    internal static async Task<ISharedImmediateTexture?> TryGetProfilePicture(HttpClient? httpClient, LodestoneClient? lodestoneClient, IDalamudPluginInterface pluginInterface, ITextureProvider textureProvider, IPluginLog log, CharacterConfiguration characterConfiguration) {
         try {
             // We had some error while loading character configuration and don't know what character this is.
             if (characterConfiguration.ContentId is 0) return null;
@@ -22,6 +25,8 @@ public static class NetStoneExtensions {
             if (profilePictureFileInfo is { Exists: true } && !characterConfiguration.PurgeProfilePicture) {
                 return textureProvider.GetFromFile(profilePictureFileInfo.FullName);
             }
+
+            if (httpClient is null || lodestoneClient is null) return null;
 
             // Else, try and get the LodestoneCharacter information that matches our name and world
             if (await lodestoneClient.TryGetLodestoneCharacter(pluginInterface, log, characterConfiguration) is { } lodestoneCharacter) {

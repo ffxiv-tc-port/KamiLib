@@ -33,18 +33,27 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
 
     private readonly CancellationTokenSource cancellationTokenSource = new();
 
-    public ConfigurationManagerWindow() : base("Configuration Manager", new Vector2(750.0f, 500.0f)) {
-        AdditionalInfoTooltip = "Allows you to easily copy plugin configuration from one character to multiple characters";
-        
+    // 預設關、不存檔（函式庫沒有自己的設定檔）：只在本插件這次載入期間有效，關閉視窗再開仍保留。
+    // 關著時不建立 LodestoneClient（它一建立就會連 GitHub 抓解析規則）、不查角色、不下載頭像。
+    private static bool lodestoneLookupEnabled;
+
+    // ### 之後是 ImGui ID：只換顯示文字，之後再改譯名也不會讓視窗位置與釘選狀態跟著重置。
+    public ConfigurationManagerWindow() : base("設定管理器###Configuration Manager", new Vector2(750.0f, 500.0f)) {
+        AdditionalInfoTooltip = "把一個角色的插件設定複製到其他多個角色";
+
         TitleBarButtons.Add(new TitleBarButton {
             Icon = FontAwesomeIcon.Recycle,
-            ShowTooltip = () => ImGui.SetTooltip("Reload Profile Pictures"),
+            ShowTooltip = () => ImGui.SetTooltip(lodestoneLookupEnabled ? "重新載入角色頭像" : "重新載入角色頭像（只讀本機已存的頭像；要從 Lodestone 重抓請先勾選上方選項）"),
             IconOffset = new Vector2(1.5f, 2.0f),
             Click = _ => {
+                var allowLodestone = lodestoneLookupEnabled;
                 foreach (var character in characters) {
-                    character.PurgeProfilePicture = true;
+                    // 沒開查詢時不清本機頭像與 Lodestone ID：清了也抓不回來，只會讓頭像消失。
+                    if (allowLodestone) {
+                        character.PurgeProfilePicture = true;
+                        character.LodestoneId = null;
+                    }
                     character.ProfilePicture = null;
-                    character.LodestoneId = null;
                 }
                 Task.Run(LoadCharacterPortraits, cancellationTokenSource.Token);
             },
@@ -63,6 +72,8 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
     }
 
     protected override void DrawContents() {
+        DrawLodestoneToggle();
+
         var leftSize = new Vector2(ImGui.GetContentRegionAvail().X * 0.35f, ImGui.GetContentRegionAvail().Y);
         var centerSize = new Vector2(ImGui.GetContentRegionAvail().X * 0.3025f - ImGui.GetStyle().ItemSpacing.X * 2.0f, ImGui.GetContentRegionAvail().Y);
         var rightSize = new Vector2(ImGui.GetContentRegionAvail().X * 0.35f, ImGui.GetContentRegionAvail().Y);
@@ -74,6 +85,16 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         DrawTargetSelect(rightSize);
     }
     
+    private void DrawLodestoneToggle() {
+        if (ImGui.Checkbox("向 Lodestone 查詢角色頭像", ref lodestoneLookupEnabled) && lodestoneLookupEnabled) {
+            Task.Run(LoadCharacterPortraits, cancellationTokenSource.Token);
+        }
+
+        if (ImGui.IsItemHovered()) {
+            ImGui.SetTooltip("打開會把角色名與世界送到 Lodestone 查詢；台服角色多半查不到");
+        }
+    }
+
     private void DrawSourceSelect(Vector2 leftSize) {
         using var leftPane = ImRaii.Child("leftPane", leftSize);
         if (!leftPane) return;
@@ -97,19 +118,19 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         using var indent = ImRaii.PushIndent(10.0f);
         
         using (var _ = ImRaii.PushColor(ImGuiCol.Text, selectedSourceCharacter is null ? KnownColor.Orange.Vector() : KnownColor.LimeGreen.Vector())) {
-            ImGui.BulletText("Select Source Character");
+            ImGui.BulletText("選擇來源角色");
         }
         
         ImGuiHelpers.ScaledDummy(10.0f);
 
         using (var _ = ImRaii.PushColor(ImGuiCol.Text, destinationCharacters is null || destinationCharacters.Count == 0 ? KnownColor.Orange.Vector() : KnownColor.LimeGreen.Vector())) {
-            ImGui.BulletText("Select Target Characters");
+            ImGui.BulletText("選擇目標角色");
         }
         
         ImGuiHelpers.ScaledDummy(10.0f);
         
         using (var _ = ImRaii.PushColor(ImGuiCol.Text, !(ImGui.GetIO().KeyShift && ImGui.GetIO().KeyCtrl) ? KnownColor.Orange.Vector() : KnownColor.LimeGreen.Vector())) {
-            ImGui.BulletText("Hold Shift + Control");
+            ImGui.BulletText("按住 Shift + Control");
         }
 
         if (selectedSourceCharacter is not null && destinationCharacters is not null && destinationCharacters.Count > 0) {
@@ -117,13 +138,13 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
             var keyComboHeld = ImGui.GetIO().KeyShift && ImGui.GetIO().KeyCtrl;
 
             using (var _ = ImRaii.Disabled(!keyComboHeld)) {
-                if (ImGui.Button("Copy Configurations", new Vector2(ImGui.GetContentRegionAvail().X, 30.0f * ImGuiHelpers.GlobalScale)) && keyComboHeld) {
+                if (ImGui.Button("複製設定", new Vector2(ImGui.GetContentRegionAvail().X, 30.0f * ImGuiHelpers.GlobalScale)) && keyComboHeld) {
                     CopySelectedConfigurations();
                 }
             }
             
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled)) {
-                ImGui.SetTooltip("Press to copy configuration from source character to all target characters\nThis can not be un-done");
+                ImGui.SetTooltip("把來源角色的設定複製到所有目標角色\n此操作無法復原");
             }
         }
     }
@@ -148,7 +169,7 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
             }
                     
             ImGui.SetCursorPosY(ImGui.GetContentRegionMax().Y - 30.0f * ImGuiHelpers.GlobalScale);
-            if (ImGui.Button("Change##target", new Vector2(ImGui.GetContentRegionAvail().X, 30.0f * ImGuiHelpers.GlobalScale))) {
+            if (ImGui.Button("變更##target", new Vector2(ImGui.GetContentRegionAvail().X, 30.0f * ImGuiHelpers.GlobalScale))) {
                 ShowCharacterMultiSelectWindow();
             }
         }
@@ -173,12 +194,12 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
 
                 destinationCharacters.RemoveAll(character => {
                     if (character == selectedSourceCharacter) {
-                        ChatGui.PrintError("Unable to select same source and target character.", PluginInterface.InternalName, 45);
+                        ChatGui.PrintError("來源角色與目標角色不能是同一個角色。", PluginInterface.InternalName, 45);
                         return true;
                     }
 
                     if (character.ContentId == ClientState.LocalContentId) {
-                        ChatGui.PrintError("Unable to select currently logged in character as target.", PluginInterface.InternalName, 45);
+                        ChatGui.PrintError("不能選擇目前登入中的角色作為目標。", PluginInterface.InternalName, 45);
                         return true;
                     }
 
@@ -191,8 +212,12 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
     
     private async void LoadCharacterPortraits() {
         try {
-            var lodestoneClient = await LodestoneClient.GetClientAsync();
-            var httpClient = new HttpClient();
+            LodestoneClient? lodestoneClient = null;
+            HttpClient? httpClient = null;
+            if (lodestoneLookupEnabled) {
+                lodestoneClient = await LodestoneClient.GetClientAsync();
+                httpClient = new HttpClient();
+            }
 
             foreach (var character in characters) {
                 _ = Task.Run(() => TryLoadCharacterProfilePicture(lodestoneClient, httpClient, character));
@@ -203,7 +228,7 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         }
     }
 
-    private async void TryLoadCharacterProfilePicture(LodestoneClient lodestoneClient, HttpClient httpClient, CharacterConfiguration characterConfiguration) {
+    private async void TryLoadCharacterProfilePicture(LodestoneClient? lodestoneClient, HttpClient? httpClient, CharacterConfiguration characterConfiguration) {
         try {
             if (characterConfiguration.ContentId is 0) return;
 
@@ -238,7 +263,7 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         }
             
         ImGui.SetCursorPosY(ImGui.GetContentRegionMax().Y - 30.0f * ImGuiHelpers.GlobalScale);
-        if (ImGui.Button("Change##source", new Vector2(ImGui.GetContentRegionAvail().X, 30.0f * ImGuiHelpers.GlobalScale))) {
+        if (ImGui.Button("變更##source", new Vector2(ImGui.GetContentRegionAvail().X, 30.0f * ImGuiHelpers.GlobalScale))) {
             ShowCharacterSelectWindow();
         }
     }
@@ -247,7 +272,7 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         if (selectedSourceCharacter is null) {
             NotificationManager.AddNotification(new Notification {
                 Type = NotificationType.Error,
-                Content = "No Source Character is Selected",
+                Content = "尚未選擇來源角色",
             });
             return;
         }
@@ -255,7 +280,7 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         if (destinationCharacters is null || destinationCharacters.Count == 0) {
             NotificationManager.AddNotification(new Notification {
                 Type = NotificationType.Error,
-                Content = "No Destination Characters are Selected",
+                Content = "尚未選擇目標角色",
             });
             return;
         }
@@ -263,14 +288,16 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
         foreach (var file in PluginInterface.GetCharacterDirectoryInfo(selectedSourceCharacter.ContentId).GetFiles()) {
             if (file is { Exists: true, Name: var fileName } && IsAllowedFileType(fileName) && !fileName.Contains("System", StringComparison.OrdinalIgnoreCase)) {
                 foreach (var targetCharacter in destinationCharacters) {
-                    file.CopyTo(PluginInterface.GetCharacterFileInfo(targetCharacter.ContentId, fileName).FullName, true);
+                    var targetPath = PluginInterface.GetCharacterFileInfo(targetCharacter.ContentId, fileName).FullName;
+                    file.CopyTo(targetPath, true);
+                    Configuration.ForgetCachedFile(targetPath);
                 }
             }
         }
 
         NotificationManager.AddNotification(new Notification {
             Type = NotificationType.Success,
-            Content = "Configurations successfully copied",
+            Content = "設定已複製完成",
         });
         
         Close();

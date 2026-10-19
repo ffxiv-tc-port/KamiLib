@@ -16,7 +16,7 @@ public class UiColorSelectionWindow: SelectionWindowBase<UIColor> {
 	
 	protected override bool ShowFilter => false;
 
-	public UiColorSelectionWindow(IDataManager dataManager) : base(new Vector2(250.0f, 400.0f))
+	public UiColorSelectionWindow(IDataManager dataManager) : base(new Vector2(250.0f, 400.0f), alternativeName: DefaultWindowName("選擇顏色"))
 		=> SelectionOptions = dataManager.GetExcelSheet<UIColor>().ToList();
 
 	protected override void DrawSelection(UIColor option) {
