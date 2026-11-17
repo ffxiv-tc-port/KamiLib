@@ -310,6 +310,8 @@ public class ConfigurationManagerWindow : Window.Window, IDisposable {
     }
 
     private bool IsAllowedFileType(string fileName) {
+        // 壞檔備份（<檔名>.bad-<時間戳>）不跟著複製到別的角色。
+        if (fileName.Contains(".bad-", StringComparison.OrdinalIgnoreCase)) return false;
         if (fileName.Contains("config.json", StringComparison.OrdinalIgnoreCase)) return true;
         if (fileName.Contains("style.json", StringComparison.OrdinalIgnoreCase)) return true;
 

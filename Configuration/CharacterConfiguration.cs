@@ -21,6 +21,9 @@ public class CharacterConfiguration  : IPluginConfiguration {
     [JsonIgnore] public bool PurgeProfilePicture { get; set; }
     [JsonIgnore] public ISharedImmediateTexture? ProfilePicture { get; set; }
 
+    /// <summary>角色清單讀不懂這個檔時給的佔位設定：只供顯示，永不寫回檔案。</summary>
+    [JsonIgnore] internal bool ReadFailed { get; set; }
+
     public unsafe void UpdateCharacterData() {
         // AgentLobby.Instance() 在 UIModule 尚未建立或代理人尚未配置時回 null，而這支在登入前就可能被呼叫：
         // 取不到就當作未登入、不動設定。

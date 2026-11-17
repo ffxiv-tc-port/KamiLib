@@ -76,6 +76,7 @@ public static class Configuration {
 
                 // If deserialize result is null, create a new instance instead and save it.
                 if (dataObject is null) {
+                    BackupBadFile(pluginInterface, filePath);
                     dataObject = createFunc();
                     SaveFile(pluginInterface, filePath, dataObject);
                 }
@@ -87,6 +88,7 @@ public static class Configuration {
                 var localLog = pluginInterface.Create<LogWrapper>();
                 localLog?.Log.Error(e, $"Error trying to load file {filePath}, creating a new one instead.");
                 
+                BackupBadFile(pluginInterface, filePath);
                 SaveFile(pluginInterface, filePath, createFunc());
             }
         }
@@ -95,6 +97,23 @@ public static class Configuration {
         SaveFile(pluginInterface, filePath, newFile);
         
         return newFile;
+    }
+
+    /// <summary>
+    /// 讀不懂的檔在被預設值覆寫之前另存成 <c>&lt;原檔名&gt;.bad-&lt;時間戳&gt;</c>，使用者的設定／進度還救得回來。
+    /// 備份失敗只記錄，不擋原本的覆寫（沿用既有的「壞檔＝回預設、插件照常載入」）。
+    /// </summary>
+    private static void BackupBadFile(IDalamudPluginInterface pluginInterface, string filePath) {
+        var localLog = pluginInterface.Create<LogWrapper>();
+
+        try {
+            var backupPath = $"{filePath}.bad-{DateTime.Now:yyyyMMdd-HHmmss}";
+            File.Copy(filePath, backupPath, overwrite: false);
+            localLog?.Log.Information($"讀不懂的設定檔已另存為 {backupPath}，原檔將以預設值重建。");
+        }
+        catch (Exception e) {
+            localLog?.Log.Error(e, $"Error trying to back up unreadable file {filePath}, it will still be replaced with defaults.");
+        }
     }
 
     private static void SaveFile<T>(IDalamudPluginInterface pluginInterface, string filePath, T file) {
@@ -156,7 +175,19 @@ public static class Configuration {
     internal static IEnumerable<CharacterConfiguration> GetAllCharacterConfigurations(this IDalamudPluginInterface pluginInterface) 
         => pluginInterface.GetAllCharacterContentIds().Select(pluginInterface.LoadCharacterConfiguration);
 
+    /// <remarks>
+    /// 這裡以<b>基底型別</b>讀插件衍生型別存的檔：讀不懂時不可以走 <see cref="LoadFile{T}"/> 的「以預設值覆寫」，
+    /// 那會抹掉衍生欄位。改成只在記憶體裡給一份佔位設定（標 <see cref="CharacterConfiguration.ReadFailed"/>，不會被寫回），
+    /// 檔案留給插件自己在該角色登入時處理。
+    /// </remarks>
     private static CharacterConfiguration LoadCharacterConfiguration(this IDalamudPluginInterface pluginInterface, ulong contentId) {
+        var fileInfo = pluginInterface.GetCharacterFileInfo(contentId, "System.config.json");
+        if (fileInfo.Exists && !TryReadCharacterConfiguration(pluginInterface, fileInfo)) {
+            var placeholder = CreateNewCharacterConfig(contentId);
+            placeholder.ReadFailed = true;
+            return placeholder;
+        }
+
         var loadedConfiguration = pluginInterface.LoadCharacterFile(contentId, "System.config.json", () => CreateNewCharacterConfig(contentId));
         if (loadedConfiguration is { Version: not 2, ContentId: 0 }) {
             loadedConfiguration.Version = 2;
@@ -175,6 +206,8 @@ public static class Configuration {
     /// 以基底型別整份寫回會丟掉衍生欄位。檔案不存在或不是 JSON 物件時才整份寫；讀檔失敗就不寫。
     /// </remarks>
     internal static void SaveCharacterConfiguration(this IDalamudPluginInterface pluginInterface, CharacterConfiguration configuration) {
+        if (configuration.ReadFailed) return;
+
         var filePath = pluginInterface.GetCharacterFileInfo(configuration.ContentId, "System.config.json").FullName;
 
         JsonObject? existing;
@@ -201,6 +234,21 @@ public static class Configuration {
         }
 
         SaveFile(pluginInterface, filePath, existing);
+    }
+
+    private static bool TryReadCharacterConfiguration(IDalamudPluginInterface pluginInterface, FileInfo fileInfo) {
+        try {
+            if (JsonSerializer.Deserialize<CharacterConfiguration>(ReadFileText(fileInfo), SerializerOptions) is not null) return true;
+        }
+        catch (Exception e) {
+            var localLog = pluginInterface.Create<LogWrapper>();
+            localLog?.Log.Error(e, $"Error trying to read {fileInfo.FullName} for the character list; leaving the file unchanged.");
+            return false;
+        }
+
+        var log = pluginInterface.Create<LogWrapper>();
+        log?.Log.Error($"{fileInfo.FullName} is null; leaving the file unchanged for the character list.");
+        return false;
     }
 
     private static IEnumerable<ulong> GetAllCharacterContentIds(this IDalamudPluginInterface pluginInterface) {
